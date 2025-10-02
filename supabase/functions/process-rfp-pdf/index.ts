@@ -1,6 +1,134 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
+
+// Regex patterns for fallback extraction
+const REGEX_PATTERNS = {
+  deadline: [
+    /deadline[:\s]+([0-9]{1,2}[-\/][0-9]{1,2}[-\/][0-9]{2,4})/i,
+    /submission\s+date[:\s]+([0-9]{1,2}[-\/][0-9]{1,2}[-\/][0-9]{2,4})/i,
+    /due\s+date[:\s]+([0-9]{1,2}[-\/][0-9]{1,2}[-\/][0-9]{2,4})/i,
+    /closing\s+date[:\s]+([0-9]{1,2}[-\/][0-9]{1,2}[-\/][0-9]{2,4})/i,
+    /([0-9]{1,2}[-\/][0-9]{1,2}[-\/][0-9]{2,4})/g
+  ],
+  budget: [
+    /budget[:\s]+(?:USD|EUR|GBP|\$|€|£)?\s*([0-9,]+(?:\.[0-9]{2})?)\s*(?:to|-)\s*(?:USD|EUR|GBP|\$|€|£)?\s*([0-9,]+(?:\.[0-9]{2})?)/i,
+    /(?:USD|EUR|GBP|\$|€|£)\s*([0-9,]+(?:\.[0-9]{2})?)\s*(?:to|-)\s*(?:USD|EUR|GBP|\$|€|£)?\s*([0-9,]+(?:\.[0-9]{2})?)/i,
+    /budget[:\s]+(?:USD|EUR|GBP|\$|€|£)?\s*([0-9,]+(?:\.[0-9]{2})?)/i
+  ],
+  currency: [
+    /\b(USD|EUR|GBP|CAD|AUD|JPY)\b/i,
+    /(\$|€|£|¥)/
+  ],
+  requirements: [
+    /(?:requirement|must|shall|should|need)[:\s]+(.+?)(?:\n|\.)/gi,
+    /(?:deliverable)[:\s]+(.+?)(?:\n|\.)/gi,
+    /(?:scope of work)[:\s]+(.+?)(?:\n|\.)/gi,
+    /(?:technical specification)[:\s]+(.+?)(?:\n|\.)/gi
+  ]
+};
+
+function parseDate(dateStr: string): string | null {
+  try {
+    const parts = dateStr.split(/[-\/]/);
+    if (parts.length === 3) {
+      let year, month, day;
+      
+      // Try different date formats
+      if (parts[2].length === 4) {
+        // DD/MM/YYYY or MM/DD/YYYY
+        day = parseInt(parts[0]);
+        month = parseInt(parts[1]);
+        year = parseInt(parts[2]);
+      } else {
+        // YYYY/MM/DD
+        year = parseInt(parts[0]);
+        month = parseInt(parts[1]);
+        day = parseInt(parts[2]);
+      }
+      
+      // Validate
+      if (year < 100) year += 2000;
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && year >= 2020 && year <= 2050) {
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      }
+    }
+  } catch (e) {
+    console.error("Date parse error:", e);
+  }
+  return null;
+}
+
+function extractWithRegex(text: string) {
+  const extracted: any = {
+    deadline: null,
+    budget_min: null,
+    budget_max: null,
+    currency: 'USD',
+    requirements: []
+  };
+
+  // Extract deadline
+  for (const pattern of REGEX_PATTERNS.deadline) {
+    const match = text.match(pattern);
+    if (match) {
+      const parsed = parseDate(match[1]);
+      if (parsed) {
+        extracted.deadline = parsed;
+        break;
+      }
+    }
+  }
+
+  // Extract budget
+  for (const pattern of REGEX_PATTERNS.budget) {
+    const match = text.match(pattern);
+    if (match) {
+      if (match[2]) {
+        // Range found
+        extracted.budget_min = parseFloat(match[1].replace(/,/g, ''));
+        extracted.budget_max = parseFloat(match[2].replace(/,/g, ''));
+      } else {
+        // Single value
+        extracted.budget_max = parseFloat(match[1].replace(/,/g, ''));
+      }
+      break;
+    }
+  }
+
+  // Extract currency
+  for (const pattern of REGEX_PATTERNS.currency) {
+    const match = text.match(pattern);
+    if (match) {
+      const curr = match[1] || match[0];
+      const currencyMap: any = { '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY' };
+      extracted.currency = currencyMap[curr] || curr;
+      break;
+    }
+  }
+
+  // Extract requirements
+  const reqSet = new Set<string>();
+  for (const pattern of REGEX_PATTERNS.requirements) {
+    const matches = text.matchAll(pattern);
+    for (const match of matches) {
+      const req = match[1]?.trim();
+      if (req && req.length > 10 && req.length < 500) {
+        reqSet.add(req);
+      }
+    }
+  }
+
+  extracted.requirements = Array.from(reqSet).slice(0, 20).map(text => ({
+    text,
+    category: 'Technical',
+    priority: 'medium',
+    is_mandatory: text.toLowerCase().includes('must') || text.toLowerCase().includes('shall')
+  }));
+
+  return extracted;
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -227,20 +355,41 @@ ${pdfText.substring(0, 100000)}`
     }
 
     const extractedData = JSON.parse(toolCall.function.arguments);
-    console.log("Extracted data:", extractedData);
+    console.log("AI extracted data:", extractedData);
+
+    // Apply regex fallback for missing fields
+    console.log("Applying regex fallback extraction...");
+    const regexData = extractWithRegex(pdfText);
+    console.log("Regex extracted data:", regexData);
+
+    // Merge: AI first, regex as fallback
+    const mergedData = {
+      client_name: extractedData.client_name || rfp.client_name,
+      deadline: extractedData.deadline || regexData.deadline || rfp.deadline,
+      budget_min: extractedData.budget_min || regexData.budget_min || rfp.budget_min,
+      budget_max: extractedData.budget_max || regexData.budget_max || rfp.budget_max,
+      currency: extractedData.currency || regexData.currency || rfp.currency,
+      description: extractedData.description || rfp.description,
+      required_technologies: extractedData.required_technologies || [],
+      requirements: extractedData.requirements && extractedData.requirements.length > 0 
+        ? extractedData.requirements 
+        : regexData.requirements
+    };
+
+    console.log("Final merged data:", mergedData);
 
     // Update RFP with extracted information
     const { error: updateError } = await supabase
       .from('rfps')
       .update({
-        client_name: extractedData.client_name || rfp.client_name,
-        deadline: extractedData.deadline || rfp.deadline,
-        budget_min: extractedData.budget_min || rfp.budget_min,
-        budget_max: extractedData.budget_max || rfp.budget_max,
-        currency: extractedData.currency || rfp.currency,
-        description: extractedData.description || rfp.description,
-        required_technologies: extractedData.required_technologies || [],
-        extracted_data: extractedData,
+        client_name: mergedData.client_name,
+        deadline: mergedData.deadline,
+        budget_min: mergedData.budget_min,
+        budget_max: mergedData.budget_max,
+        currency: mergedData.currency,
+        description: mergedData.description,
+        required_technologies: mergedData.required_technologies,
+        extracted_data: { ai: extractedData, regex: regexData, merged: mergedData },
         status: 'active'
       })
       .eq('id', rfpId);
@@ -251,13 +400,13 @@ ${pdfText.substring(0, 100000)}`
     }
 
     // Insert requirements
-    if (extractedData.requirements && extractedData.requirements.length > 0) {
-      const requirementsToInsert = extractedData.requirements.map((req: any) => ({
+    if (mergedData.requirements && mergedData.requirements.length > 0) {
+      const requirementsToInsert = mergedData.requirements.map((req: any) => ({
         rfp_id: rfpId,
         requirement_text: req.text,
-        category: req.category,
-        priority: req.priority,
-        is_mandatory: req.is_mandatory
+        category: req.category || 'Technical',
+        priority: req.priority || 'medium',
+        is_mandatory: req.is_mandatory !== undefined ? req.is_mandatory : true
       }));
 
       const { error: reqError } = await supabase
@@ -266,14 +415,15 @@ ${pdfText.substring(0, 100000)}`
 
       if (reqError) {
         console.error("Requirements insert error:", reqError);
-        // Don't fail the whole operation if requirements fail
+      } else {
+        console.log(`Inserted ${requirementsToInsert.length} requirements`);
       }
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        extractedData,
+        extractedData: mergedData,
         message: "RFP processed successfully"
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
