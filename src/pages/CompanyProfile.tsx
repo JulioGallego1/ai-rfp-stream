@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, X, Save, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import PastProjects from "@/components/PastProjects";
 
 const CompanyProfile = () => {
   const { toast } = useToast();
@@ -19,7 +20,11 @@ const CompanyProfile = () => {
     industry: "",
     size: "",
     website: "",
+    employee_count: null as number | null,
+    available_funds: null as number | null,
+    technologies: [] as string[],
   });
+  const [newTechnology, setNewTechnology] = useState("");
   const [newCapability, setNewCapability] = useState({
     category: "",
     capability: "",
@@ -177,6 +182,86 @@ const CompanyProfile = () => {
               />
             </div>
 
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Number of Employees</label>
+                <Input
+                  type="number"
+                  value={companyData.employee_count || ""}
+                  onChange={(e) => setCompanyData({ ...companyData, employee_count: e.target.value ? parseInt(e.target.value) : null })}
+                  placeholder="250"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Available Funds (USD)</label>
+                <Input
+                  type="number"
+                  value={companyData.available_funds || ""}
+                  onChange={(e) => setCompanyData({ ...companyData, available_funds: e.target.value ? parseFloat(e.target.value) : null })}
+                  placeholder="1000000"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Technologies</label>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    value={newTechnology}
+                    onChange={(e) => setNewTechnology(e.target.value)}
+                    placeholder="e.g., React, Node.js, AWS"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && newTechnology.trim()) {
+                        e.preventDefault();
+                        setCompanyData({
+                          ...companyData,
+                          technologies: [...companyData.technologies, newTechnology.trim()]
+                        });
+                        setNewTechnology("");
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (newTechnology.trim()) {
+                        setCompanyData({
+                          ...companyData,
+                          technologies: [...companyData.technologies, newTechnology.trim()]
+                        });
+                        setNewTechnology("");
+                      }
+                    }}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {companyData.technologies.map((tech, index) => (
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="flex items-center gap-1"
+                    >
+                      {tech}
+                      <X
+                        className="w-3 h-3 cursor-pointer"
+                        onClick={() => {
+                          setCompanyData({
+                            ...companyData,
+                            technologies: companyData.technologies.filter((_, i) => i !== index)
+                          });
+                        }}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             <Button
               onClick={() => saveCompanyMutation.mutate(companyData)}
               disabled={!companyData.name || saveCompanyMutation.isPending}
@@ -246,6 +331,8 @@ const CompanyProfile = () => {
             ))}
           </div>
         </Card>
+
+        <PastProjects companyId={company?.id} />
       </div>
     </Layout>
   );
