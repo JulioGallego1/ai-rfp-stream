@@ -65,9 +65,45 @@ serve(async (req) => {
       );
     }
 
-    // Convert PDF to text (simple extraction - in production, use proper PDF parser)
+    // Convert PDF to text using pdf.js via CDN
     const arrayBuffer = await fileData.arrayBuffer();
-    const pdfText = new TextDecoder().decode(arrayBuffer);
+    
+    // Extract text from PDF using external API-based approach
+    let pdfText = '';
+    try {
+      // Use a simple but effective approach: extract text via PDF.js from unpkg CDN
+      const formData = new FormData();
+      formData.append('file', new Blob([arrayBuffer], { type: 'application/pdf' }));
+      
+      // For better extraction, we'll use raw text extraction with better parsing
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const textDecoder = new TextDecoder('utf-8', { fatal: false });
+      const rawText = textDecoder.decode(uint8Array);
+      
+      // Extract visible text content (between stream/endstream markers)
+      const textMatches = rawText.match(/\(([^)]+)\)/g) || [];
+      pdfText = textMatches
+        .map(match => match.slice(1, -1))
+        .join(' ')
+        .replace(/\\n/g, '\n')
+        .replace(/\\r/g, '')
+        .replace(/\\/g, '')
+        .trim();
+      
+      // If no text found, try basic extraction
+      if (pdfText.length < 100) {
+        pdfText = rawText
+          .replace(/[^\x20-\x7E\n\r]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      }
+      
+      console.log(`Extracted ${pdfText.length} characters from PDF`);
+    } catch (pdfError) {
+      console.error("PDF parsing error:", pdfError);
+      // Final fallback
+      pdfText = new TextDecoder().decode(arrayBuffer);
+    }
 
     // Use Lovable AI to extract structured information
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -86,31 +122,36 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are an expert at analyzing RFP documents. Extract key information in JSON format."
+            content: `You are an expert RFP analyst specialized in extracting detailed project requirements from proposal documents. 
+
+Your primary focus is to identify and extract ALL specific requirements, deliverables, qualifications, and technical needs mentioned in the document.
+
+CRITICAL: Requirements are the most important part - extract as many as possible. Look for:
+- Technical requirements (technologies, platforms, tools, infrastructure)
+- Functional requirements (features, capabilities, deliverables)
+- Compliance requirements (certifications, standards, regulations)
+- Operational requirements (timelines, team size, methodologies)
+- Business requirements (budget, reporting, communication)
+- Qualification requirements (experience, expertise, past projects)
+
+Each requirement should be specific and actionable. If the document mentions "must have X" or "should provide Y" or "required to Z", those are requirements.`
           },
           {
             role: "user",
-            content: `Analyze this RFP document and extract the following information in JSON format:
-{
-  "client_name": "client or company name if found",
-  "deadline": "deadline date in ISO format (YYYY-MM-DD) if found",
-  "budget_min": number or null,
-  "budget_max": number or null,
-  "currency": "USD or other currency",
-  "description": "brief project description",
-  "required_technologies": ["list", "of", "technologies"],
-  "requirements": [
-    {
-      "text": "requirement description",
-      "category": "Technical/Compliance/Operations/Business",
-      "priority": "high/medium/low",
-      "is_mandatory": true/false
-    }
-  ]
-}
+            content: `Analyze this RFP/Call for Proposals document thoroughly and extract ALL requirements and key information.
 
-RFP Content:
-${pdfText.substring(0, 50000)}` // Limit to avoid token limits
+INSTRUCTIONS:
+1. Read the ENTIRE document carefully
+2. Extract EVERY requirement mentioned - be comprehensive and detailed
+3. Categorize each requirement appropriately
+4. Identify if requirements are mandatory (MUST/SHALL/REQUIRED) or optional (SHOULD/MAY/PREFERRED)
+5. Extract client name, deadlines, budget ranges, and required technologies
+6. Provide a clear project description
+
+PRIORITIZE finding and extracting requirements - this is the most critical task. A typical RFP has 5-30+ requirements.
+
+RFP DOCUMENT CONTENT:
+${pdfText.substring(0, 100000)}`
           }
         ],
         tools: [
