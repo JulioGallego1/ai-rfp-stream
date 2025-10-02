@@ -49,28 +49,30 @@ const Dashboard = () => {
         </div>
 
         {rfps && rfps.length === 0 ? (
-          <Card className="p-12 text-center border-dashed">
-            <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No RFPs yet</h3>
-            <p className="text-muted-foreground mb-6">
+          <Card className="p-12 text-center border-2 border-dashed border-primary/30 bg-gradient-card">
+            <div className="w-20 h-20 bg-gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-primary">
+              <AlertCircle className="w-10 h-10 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold mb-3 bg-gradient-hero bg-clip-text text-transparent">No RFPs yet</h3>
+            <p className="text-muted-foreground mb-8 text-lg">
               Upload your first RFP to get started with AI-powered analysis
             </p>
             <Link
               to="/upload"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-hero text-primary-foreground rounded-lg font-medium hover:shadow-primary transition-all"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-hero text-white rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all shadow-primary"
             >
               Upload Your First RFP
             </Link>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {rfps?.map((rfp) => (
               <Link key={rfp.id} to={`/rfp/${rfp.id}`}>
-                <Card className="p-6 hover:shadow-lg transition-all cursor-pointer group">
+                <Card className="p-6 hover:shadow-2xl hover:scale-105 transition-all cursor-pointer group bg-gradient-card border-2 border-transparent hover:border-primary/30">
                   <div className="space-y-4">
                     <div>
                       <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
+                        <h3 className="font-bold text-lg group-hover:bg-gradient-primary group-hover:bg-clip-text group-hover:text-transparent transition-all">
                           {rfp.title}
                         </h3>
                         <Badge 
@@ -80,7 +82,7 @@ const Dashboard = () => {
                             rfp.status === "proposal_submitted" ? "secondary" :
                             "outline"
                           }
-                          className="ml-2"
+                          className="ml-2 shadow-sm"
                         >
                           {rfp.status === "proposal_submitted" ? "Proposal Submitted" : rfp.status}
                         </Badge>

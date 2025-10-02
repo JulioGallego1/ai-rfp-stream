@@ -122,14 +122,14 @@ const CompanyProfile = () => {
           </p>
         </div>
 
-        <Card className="p-6">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-primary-foreground" />
+        <Card className="p-8 bg-gradient-card border-2 shadow-lg">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-hero flex items-center justify-center shadow-primary">
+              <Building2 className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold">Company Information</h2>
-              <p className="text-sm text-muted-foreground">Basic details about your organization</p>
+              <h2 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">Company Information</h2>
+              <p className="text-muted-foreground">Basic details about your organization</p>
             </div>
           </div>
 
@@ -265,16 +265,16 @@ const CompanyProfile = () => {
             <Button
               onClick={() => saveCompanyMutation.mutate(companyData)}
               disabled={!companyData.name || saveCompanyMutation.isPending}
-              className="w-full bg-gradient-primary hover:shadow-primary"
+              className="w-full bg-gradient-hero hover:shadow-xl hover:scale-105 transition-all text-white font-semibold py-6 text-lg shadow-primary"
             >
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="w-5 h-5 mr-2" />
               Save Company Profile
             </Button>
           </div>
         </Card>
 
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Capabilities</h2>
+        <Card className="p-8 bg-gradient-card border-2 shadow-lg">
+          <h2 className="text-2xl font-bold mb-6 bg-gradient-secondary bg-clip-text text-transparent">Capabilities</h2>
           
           <div className="space-y-4 mb-6">
             <div className="grid md:grid-cols-2 gap-4">
@@ -300,10 +300,9 @@ const CompanyProfile = () => {
             <Button
               onClick={() => addCapabilityMutation.mutate(newCapability)}
               disabled={!newCapability.category || !newCapability.capability || !company?.id}
-              variant="outline"
-              className="w-full"
+              className="w-full bg-gradient-secondary hover:shadow-xl hover:scale-105 transition-all text-white font-semibold py-4 shadow-secondary"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-5 h-5 mr-2" />
               Add Capability
             </Button>
           </div>
@@ -312,7 +311,7 @@ const CompanyProfile = () => {
             {capabilities?.map((cap) => (
               <div
                 key={cap.id}
-                className="flex items-center justify-between p-3 bg-secondary rounded-lg"
+                className="flex items-center justify-between p-4 bg-gradient-to-r from-muted to-secondary/50 rounded-xl shadow-md hover:shadow-lg transition-all border border-border/50"
               >
                 <div>
                   <Badge variant="outline" className="mb-1">
