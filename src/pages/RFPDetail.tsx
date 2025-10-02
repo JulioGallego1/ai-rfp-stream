@@ -299,9 +299,9 @@ const RFPDetail = () => {
 
         <div className="grid md:grid-cols-3 gap-4">
           {rfp.deadline && (
-            <Card className="p-4 bg-gradient-to-br from-warning/5 to-warning/10 border-warning/20">
+            <Card className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-warning/15 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
                   <Calendar className="w-5 h-5 text-warning" />
                 </div>
                 <div>
@@ -313,9 +313,9 @@ const RFPDetail = () => {
           )}
 
           {(rfp.budget_min || rfp.budget_max) && (
-            <Card className="p-4 bg-gradient-to-br from-success/5 to-success/10 border-success/20">
+            <Card className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-success/15 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
                   <DollarSign className="w-5 h-5 text-success" />
                 </div>
                 <div className="flex-1">
@@ -340,7 +340,7 @@ const RFPDetail = () => {
             </Card>
           )}
 
-          <Card className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+          <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                 <FileText className="w-5 h-5 text-primary" />
