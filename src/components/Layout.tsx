@@ -18,7 +18,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-3">
-              <img src={nttDataLogo} alt="NTT DATA" className="h-[90px] w-auto" />
+              <img src={nttDataLogo} alt="NTT DATA" className="h-20 w-auto" />
             </Link>
             
             <div className="flex gap-2">
