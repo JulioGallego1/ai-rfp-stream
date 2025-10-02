@@ -113,22 +113,34 @@ ${rfp.rfp_requirements?.map((req: any) =>
 ).join('\n') || 'No requirements listed'}
 `;
 
-    const prompt = `You are an expert proposal writer. Generate a comprehensive RFP response template based on the company's capabilities and the RFP requirements.
+    const prompt = `You are an expert RFP proposal writer following NTT DATA's proven template structure.
 
+INSTRUCTIONS:
+- Use Hook-Story-Offer framework in executive summary (250-300 words max)
+- Address EVERY requirement with specific company evidence
+- Include quantified commitments and ROI calculations
+- Reference actual past projects from company database
+- Use professional tables and formatting
+- NEVER fabricate capabilities - only use provided company data
+- Mark uncertainties with [VERIFY: ...]
+
+TEMPLATE STRUCTURE:
+1. DECLARACIÓN EJECUTIVA - Hook-Story-Offer, quantified commitments, timeline
+2. ANÁLISIS DE VIABILIDAD TÉCNICA - Capabilities mapping, team details
+3. ASPECTOS ECONÓMICOS - Cost breakdown, payment options, ROI
+4. CUMPLIMIENTO NORMATIVO - Compliance status, SLAs
+5. PLAN DE IMPLEMENTACIÓN - Phases, milestones, risks
+6. CASOS DE ÉXITO - 2-3 relevant past projects with metrics
+7. VALOR DIFERENCIAL - Why choose us, guarantees
+8. CONCLUSIÓN - Restate commitment, validity, contact
+
+COMPANY DATA:
 ${companyContext}
 
+RFP DETAILS:
 ${rfpContext}
 
-Create a professional response template that:
-1. Opens with a strong executive summary explaining why this company is the best choice
-2. Addresses each requirement explicitly, showing how the company meets it
-3. Highlights relevant past projects and success stories
-4. Demonstrates technical capabilities matching the required technologies
-5. Addresses budget and timeline realistically
-6. Includes a compelling value proposition
-7. Ends with next steps and contact information
-
-Structure the response with clear sections. Be specific and reference actual company capabilities and past projects. Make it persuasive but realistic.`;
+Generate a complete proposal following the NTT DATA template structure with specific evidence from the company database for each requirement.`;
 
     console.log("Calling AI to generate template...");
 

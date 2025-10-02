@@ -1,0 +1,183 @@
+# Example Proposal: NTT DATA - Hospital Universitario San Carlos
+
+## Cover Page
+
+**Propuesta NTT DATA - Hospital Universitario San Carlos**
+
+NTT DATA ESPAÑA, S.L.U.
+Paseo de la Castellana, 216
+28046 Madrid, España
+CIF: B-82650841
+Tel: +34 91 123 45 67
+
+Para: Hospital Universitario San Carlos
+Att.: Dr. Javier Martínez López - Director Gerente
+Fecha: 15 de noviembre de 2024
+Referencia: LIC-2024-HUSC-078
+
+Asunto: Propuesta Técnica y Económica para la Implementación del Sistema de Gestión Clínica Unificada
+
+## 1. DECLARACIÓN EJECUTIVA
+
+Estimado Dr. Martínez y Comité de Dirección:
+
+En respuesta a su solicitud de propuesta LIC-2024-HUSC-078, nos complace presentar nuestra solución "Clinical Hub 360", específicamente diseñada para abordar los desafíos de coordinación interdepartamental y optimización del historial clínico electrónico que su institución ha identificado.
+
+NTT DATA se compromete a:
+- Implementar una plataforma unificada que reduzca en un 70% los tiempos de derivación entre especialidades
+- Garantizar el cumplimiento integral de la normativa ENS Nivel Alto y LOPD/GDPR
+- Entregar un ROI demostrable dentro de los primeros 18 meses de operación
+- Asegurar la continuidad asistencial durante toda la transición
+
+| Concepto | Valor |
+|----------|-------|
+| Inversión Propuesta | 1.850.000 € (IVA incluido) |
+| Periodo de Implementación | 9 meses |
+| Garantía | 36 meses en componentes críticos |
+
+## 2. ANÁLISIS DE VIABILIDAD TÉCNICA
+
+### 2.1. Compatibilidad con Sistemas Existentes
+
+| Sistema Actual | Compatibilidad | Estrategia de Integración |
+|----------------|----------------|---------------------------|
+| Selene HIS v.4.2 | ✅ Completa | APIs RESTful + conectores certificados |
+| PACS Radiology | ✅ Completa | Integración DICOM HL7 estándar |
+| Laboratorio LabWin | ✅ Completa | Conector específico ya desarrollado |
+| Farmacia Farmatool | 🔄 Parcial | Desarrollo adaptador (incluido) |
+
+### 2.2. Recursos y Capacidades NTT DATA
+
+**Equipo Asignado:**
+- 1 Director de Proyecto Senior (Certificado PMP, 15 años experiencia sanitaria)
+- 3 Arquitectos Solución (Especializados interoperabilidad sanitaria)
+- 5 Ingenieros Desarrollo (Certificados HL7/FHIR)
+- 2 Consultores Procesos Clínicos (Ex-facultativos especialistas)
+- 1 Oficial Cumplimiento Legal (Experto ENS sanitario)
+
+**Disponibilidad:** Equipo dedicado al 100% desde firma contrato
+
+## 3. ASPECTOS ECONÓMICOS
+
+### 3.1. Desglose de Inversión
+
+| Concepto | Importe (€) | Observaciones |
+|----------|-------------|---------------|
+| Licencias Software | 450.000 | Incluye mantenimiento 36 meses |
+| Servicios Implementación | 890.000 | Equipo dedicado 9 meses |
+| Hardware/Infraestructura | 320.000 | Configuración high-availability |
+| Formación y Soporte | 190.000 | 1.200 horas formación incluida |
+| **TOTAL (IVA incluido)** | **1.850.000** | |
+
+### 3.2. Modelo de Financiación
+
+**Opciones de Pago:**
+- Opción A: 40% inicio, 30% hito intermedio, 30% entrega
+- Opción B: Pago fraccionado mensual por hitos cumplidos
+- Opción C: Renting tecnológico 36 meses (consultar condiciones)
+
+**ROI Estimado:**
+- Ahorro en eficiencia: 580.000 €/año (tiempo médico)
+- Reducción costes operativos: 120.000 €/año (papel, almacenamiento)
+- Retorno inversión: 22 meses
+
+## 4. CUMPLIMIENTO NORMATIVO Y REQUISITOS
+
+### 4.1. Cumplimiento Legal y Regulatorio
+
+✅ **ENS Nivel Alto** - Certificación vigente, renovación anual
+✅ **LOPD/GDPR** - Responsable DPO dedicado, auditorías trimestrales
+✅ **Interoperabilidad HL7/FHIR** - Estándares implementados
+✅ **Accesibilidad WCAG 2.1 AA** - Cumplimiento verificado
+
+### 4.2. Garantías de Servicio
+
+- **SLA Disponibilidad:** 99.9% tiempo operativo
+- **Tiempo Respuesta Incidencias Críticas:** < 2 horas
+- **Soporte 24/7:** Centro de operaciones dedicado
+- **Copias de Seguridad:** Automáticas cada 6 horas, retención 90 días
+
+## 5. PLAN DE IMPLEMENTACIÓN
+
+### 5.1. Cronograma de Hitos
+
+| Fase | Duración | Entregables Clave | Fecha Estimada |
+|------|----------|-------------------|----------------|
+| Fase 1: Análisis y Diseño | 6 semanas | Especificación técnica detallada | Semana 6 |
+| Fase 2: Desarrollo Core | 12 semanas | Módulo HCE integrado | Semana 18 |
+| Fase 3: Integraciones | 8 semanas | Conectores sistemas legacy | Semana 26 |
+| Fase 4: Pruebas y Certificación | 6 semanas | Ambiente certificado | Semana 32 |
+| Fase 5: Despliegue y Formación | 4 semanas | Sistema en producción | Semana 36 |
+
+### 5.2. Gestión de Riesgos
+
+| Riesgo | Probabilidad | Impacto | Mitigación |
+|--------|--------------|---------|------------|
+| Resistencia al cambio usuario | Media | Alto | Plan formación 1.200h + Champions internos |
+| Incompatibilidad sistemas legacy | Baja | Alto | Pruebas integración adelantadas + adaptadores custom |
+| Disponibilidad recursos cliente | Media | Medio | Planificación compartida + backups |
+
+## 6. CASOS DE ÉXITO COMPARABLES
+
+### Caso 1: Hospital Clínico de Barcelona (2022-2023)
+- **Reto:** Integración 8 sistemas departamentales independientes
+- **Solución:** Plataforma unificada NTT DATA HealthHub
+- **Resultados:**
+  - Reducción 65% tiempos administrativos
+  - Mejora 40% satisfacción paciente
+  - ROI alcanzado en 18 meses
+- **Presupuesto:** 2.1M € (comparable)
+
+### Caso 2: Complejo Sanitario Regional Andalucía (2023-2024)
+- **Reto:** Modernización HCE con cumplimiento ENS Alto
+- **Solución:** Clinical Hub 360 (misma propuesta)
+- **Resultados:**
+  - Certificación ENS Alto en primera auditoría
+  - Interoperabilidad 100% con Historia Clínica Digital SNS
+  - Disponibilidad 99.97% primer año
+- **Presupuesto:** 3.5M € (mayor escala)
+
+## 7. VALOR DIFERENCIAL NTT DATA
+
+### 7.1. Por Qué Elegirnos
+
+1. **Experiencia Específica Sanitaria:**
+   - +50 proyectos sanitarios España últimos 5 años
+   - Partnership estratégico con principales HIS providers
+   - Equipo con ex-profesionales sanitarios
+
+2. **Garantía de Cumplimiento:**
+   - Certificación ENS Alto corporativa
+   - DPO sanitario dedicado
+   - Auditorías externas anuales
+
+3. **Compromiso de Resultados:**
+   - SLA contractuales con penalizaciones
+   - Garantía ROI 18 meses o extensión soporte sin coste
+   - Equipo dedicado post-implantación 12 meses
+
+### 7.2. Soporte Post-Implantación
+
+- **Años 1-3:** Soporte incluido (horario laboral)
+- **24/7 NOC:** Disponible desde día 1
+- **Actualizaciones:** Inclusas durante periodo garantía
+- **Formación continua:** 200h/año incluidas
+
+## 8. CONCLUSIÓN Y PRÓXIMOS PASOS
+
+NTT DATA se compromete a entregar una solución que no solo cumpla los requisitos técnicos y regulatorios, sino que transforme la experiencia de los profesionales sanitarios y pacientes del Hospital Universitario San Carlos.
+
+**Propuesta válida:** 90 días desde fecha presentación
+
+**Contacto para dudas:**
+Dra. María González Ruiz
+Directora Sectorial Sanidad
+maria.gonzalez@nttdata.com
++34 91 123 45 68
+
+Quedamos a su disposición para cualquier aclaración y esperamos tener la oportunidad de colaborar en este proyecto estratégico.
+
+Atentamente,
+
+**Juan Carlos Fernández**
+Director General NTT DATA España
