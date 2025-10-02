@@ -123,16 +123,42 @@ const RFPDetail = () => {
     setTimeout(() => setIsGenerating(false), 500);
   };
 
-  // Calculate compliance
+  // Calculate compliance - VERY LENIENT MATCHING
   const getComplianceStatus = (requirement: any) => {
     if (!company?.company_capabilities) return "unknown";
     
-    const matchingCapabilities = company.company_capabilities.filter((cap) =>
-      requirement.requirement_text.toLowerCase().includes(cap.capability.toLowerCase()) ||
-      cap.capability.toLowerCase().includes(requirement.requirement_text.toLowerCase())
-    );
+    // Split requirement into individual words (minimum 3 characters to avoid noise)
+    const requirementWords = requirement.requirement_text
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter((word: string) => word.length >= 3);
+    
+    // Check if ANY word in requirement matches ANY word in ANY capability
+    const hasMatch = company.company_capabilities.some((cap) => {
+      const capabilityWords = cap.capability
+        .toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter((word: string) => word.length >= 3);
+      
+      // Also check category words
+      const categoryWords = cap.category
+        .toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter((word: string) => word.length >= 3);
+      
+      const allCapabilityWords = [...capabilityWords, ...categoryWords];
+      
+      return requirementWords.some((reqWord: string) =>
+        allCapabilityWords.some((capWord: string) => 
+          reqWord.includes(capWord) || capWord.includes(reqWord)
+        )
+      );
+    });
 
-    return matchingCapabilities.length > 0 ? "met" : "not_met";
+    return hasMatch ? "met" : "not_met";
   };
 
   if (isLoading) {
