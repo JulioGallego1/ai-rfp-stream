@@ -16,32 +16,41 @@ export type Database = {
     Tables: {
       companies: {
         Row: {
+          available_funds: number | null
           created_at: string | null
           description: string | null
+          employee_count: number | null
           id: string
           industry: string | null
           name: string
           size: string | null
+          technologies: string[] | null
           updated_at: string | null
           website: string | null
         }
         Insert: {
+          available_funds?: number | null
           created_at?: string | null
           description?: string | null
+          employee_count?: number | null
           id?: string
           industry?: string | null
           name: string
           size?: string | null
+          technologies?: string[] | null
           updated_at?: string | null
           website?: string | null
         }
         Update: {
+          available_funds?: number | null
           created_at?: string | null
           description?: string | null
+          employee_count?: number | null
           id?: string
           industry?: string | null
           name?: string
           size?: string | null
+          technologies?: string[] | null
           updated_at?: string | null
           website?: string | null
         }
@@ -140,6 +149,56 @@ export type Database = {
           },
         ]
       }
+      past_projects: {
+        Row: {
+          budget: number | null
+          client_name: string | null
+          company_id: string | null
+          completion_date: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          outcome: string | null
+          project_name: string
+          technologies_used: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          budget?: number | null
+          client_name?: string | null
+          company_id?: string | null
+          completion_date?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          outcome?: string | null
+          project_name: string
+          technologies_used?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          budget?: number | null
+          client_name?: string | null
+          company_id?: string | null
+          completion_date?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          outcome?: string | null
+          project_name?: string
+          technologies_used?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "past_projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rfp_requirements: {
         Row: {
           category: string | null
@@ -234,6 +293,7 @@ export type Database = {
           budget_max: number | null
           budget_min: number | null
           client_name: string | null
+          compatibility_score: number | null
           created_at: string | null
           currency: string | null
           deadline: string | null
@@ -241,6 +301,7 @@ export type Database = {
           document_url: string | null
           extracted_data: Json | null
           id: string
+          required_technologies: string[] | null
           status: string | null
           title: string
           updated_at: string | null
@@ -249,6 +310,7 @@ export type Database = {
           budget_max?: number | null
           budget_min?: number | null
           client_name?: string | null
+          compatibility_score?: number | null
           created_at?: string | null
           currency?: string | null
           deadline?: string | null
@@ -256,6 +318,7 @@ export type Database = {
           document_url?: string | null
           extracted_data?: Json | null
           id?: string
+          required_technologies?: string[] | null
           status?: string | null
           title: string
           updated_at?: string | null
@@ -264,6 +327,7 @@ export type Database = {
           budget_max?: number | null
           budget_min?: number | null
           client_name?: string | null
+          compatibility_score?: number | null
           created_at?: string | null
           currency?: string | null
           deadline?: string | null
@@ -271,6 +335,7 @@ export type Database = {
           document_url?: string | null
           extracted_data?: Json | null
           id?: string
+          required_technologies?: string[] | null
           status?: string | null
           title?: string
           updated_at?: string | null
