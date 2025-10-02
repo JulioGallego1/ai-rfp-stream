@@ -2,3 +2,6 @@ project_id = "sxqjpddcepmtlqlqjzlq"
 
 [functions.process-rfp-pdf]
 verify_jwt = false
+
+[functions.generate-response-template]
+verify_jwt = false

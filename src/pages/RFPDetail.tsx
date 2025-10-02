@@ -1,14 +1,22 @@
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "@/components/Layout";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Calendar, DollarSign, FileText, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { CheckCircle2, XCircle, Calendar, DollarSign, FileText, Sparkles, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 const RFPDetail = () => {
   const { id } = useParams();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [generatedTemplate, setGeneratedTemplate] = useState<string>("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const { data: rfp, isLoading } = useQuery({
     queryKey: ["rfp", id],
@@ -30,7 +38,8 @@ const RFPDetail = () => {
       const { data, error } = await supabase
         .from("rfp_requirements")
         .select("*")
-        .eq("rfp_id", id);
+        .eq("rfp_id", id)
+        .order("priority", { ascending: false });
       
       if (error) throw error;
       return data;
@@ -55,7 +64,66 @@ const RFPDetail = () => {
     },
   });
 
-  // Simulate compliance matching
+  const { data: existingResponse } = useQuery({
+    queryKey: ["rfp_response", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rfp_responses")
+        .select("*")
+        .eq("rfp_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const generateTemplateMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke(
+        'generate-response-template',
+        { body: { rfpId: id } }
+      );
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      setGeneratedTemplate(data.template);
+      queryClient.invalidateQueries({ queryKey: ["rfp_response", id] });
+      toast({
+        title: "Template generated successfully",
+        description: "Review and refine the AI-generated response below",
+      });
+    },
+    onError: (error) => {
+      console.error("Generation error:", error);
+      toast({
+        title: "Failed to generate template",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleGenerateTemplate = () => {
+    if (!company) {
+      toast({
+        title: "Company profile required",
+        description: "Please complete your company profile first",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsGenerating(true);
+    generateTemplateMutation.mutate();
+    setTimeout(() => setIsGenerating(false), 500);
+  };
+
+  // Calculate compliance
   const getComplianceStatus = (requirement: any) => {
     if (!company?.company_capabilities) return "unknown";
     
@@ -95,6 +163,14 @@ const RFPDetail = () => {
   const totalRequirements = requirements?.length || 0;
   const compliancePercentage = totalRequirements > 0 ? Math.round((metRequirements / totalRequirements) * 100) : 0;
 
+  const statusColors = {
+    pending: "outline",
+    active: "default",
+    proposal_submitted: "secondary",
+    accepted: "default",
+    rejected: "destructive"
+  } as const;
+
   return (
     <Layout>
       <div className="max-w-5xl mx-auto space-y-6">
@@ -106,8 +182,11 @@ const RFPDetail = () => {
                 <p className="text-muted-foreground text-lg">{rfp.client_name}</p>
               )}
             </div>
-            <Badge variant={rfp.status === "active" ? "default" : "secondary"} className="text-sm">
-              {rfp.status}
+            <Badge 
+              variant={statusColors[rfp.status as keyof typeof statusColors] || "outline"} 
+              className="text-sm"
+            >
+              {rfp.status === "proposal_submitted" ? "Proposal Submitted" : rfp.status}
             </Badge>
           </div>
 
@@ -120,7 +199,7 @@ const RFPDetail = () => {
           {rfp.deadline && (
             <Card className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-warning-light flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
                   <Calendar className="w-5 h-5 text-warning" />
                 </div>
                 <div>
@@ -134,7 +213,7 @@ const RFPDetail = () => {
           {(rfp.budget_min || rfp.budget_max) && (
             <Card className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-success-light flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
                   <DollarSign className="w-5 h-5 text-success" />
                 </div>
                 <div>
@@ -167,23 +246,37 @@ const RFPDetail = () => {
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-gradient-success flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-success-foreground" />
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                compliancePercentage >= 80 ? 'bg-success/10' :
+                compliancePercentage >= 60 ? 'bg-warning/10' :
+                'bg-destructive/10'
+              }`}>
+                <Sparkles className={`w-6 h-6 ${
+                  compliancePercentage >= 80 ? 'text-success' :
+                  compliancePercentage >= 60 ? 'text-warning' :
+                  'text-destructive'
+                }`} />
               </div>
               <div>
-                <h2 className="text-xl font-semibold">Compliance Analysis</h2>
+                <h2 className="text-xl font-semibold">Compatibility Analysis</h2>
                 <p className="text-sm text-muted-foreground">
-                  Automatic matching against your company capabilities
+                  Matching against your company capabilities
                 </p>
               </div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-primary">{compliancePercentage}%</div>
+              <div className={`text-3xl font-bold ${
+                compliancePercentage >= 80 ? 'text-success' :
+                compliancePercentage >= 60 ? 'text-warning' :
+                'text-destructive'
+              }`}>
+                {compliancePercentage}%
+              </div>
               <div className="text-sm text-muted-foreground">Match Score</div>
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 mb-6">
             {requirements?.map((req) => {
               const status = getComplianceStatus(req);
               return (
@@ -218,9 +311,71 @@ const RFPDetail = () => {
           </div>
 
           {!company && (
-            <div className="mt-6 p-4 bg-warning-light rounded-lg border border-warning/20">
-              <p className="text-sm text-warning-foreground">
-                <strong>Note:</strong> Complete your company profile to see personalized compliance matching
+            <div className="p-4 bg-warning/10 rounded-lg border border-warning/20">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+                <p className="text-sm">
+                  <strong>Note:</strong> Complete your company profile to see personalized compliance matching
+                </p>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-semibold">Response Template</h2>
+              <p className="text-sm text-muted-foreground">
+                AI-generated proposal draft based on your capabilities
+              </p>
+            </div>
+            <Button
+              onClick={handleGenerateTemplate}
+              disabled={isGenerating || generateTemplateMutation.isPending || !company}
+              className="bg-gradient-hero hover:shadow-primary"
+            >
+              {isGenerating || generateTemplateMutation.isPending ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Template
+                </>
+              )}
+            </Button>
+          </div>
+
+          {(generatedTemplate || existingResponse?.draft_content) && (
+            <div className="space-y-4">
+              <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                <p className="text-sm text-muted-foreground mb-2">
+                  <strong>Note:</strong> This is an AI-generated draft. Please review and refine before submission.
+                </p>
+              </div>
+              <Textarea
+                value={generatedTemplate || existingResponse?.draft_content || ""}
+                onChange={(e) => setGeneratedTemplate(e.target.value)}
+                rows={20}
+                className="font-mono text-sm"
+                placeholder="Your response template will appear here..."
+              />
+              <div className="flex gap-2">
+                <Button variant="outline">Save Draft</Button>
+                <Button>Submit Proposal</Button>
+              </div>
+            </div>
+          )}
+
+          {!generatedTemplate && !existingResponse?.draft_content && (
+            <div className="text-center py-12 border-2 border-dashed rounded-lg">
+              <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground mb-2">No template generated yet</p>
+              <p className="text-sm text-muted-foreground">
+                Click "Generate Template" to create an AI-powered response
               </p>
             </div>
           )}

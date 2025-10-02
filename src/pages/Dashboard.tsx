@@ -74,10 +74,15 @@ const Dashboard = () => {
                           {rfp.title}
                         </h3>
                         <Badge 
-                          variant={rfp.status === "active" ? "default" : "secondary"}
+                          variant={
+                            rfp.status === "accepted" ? "default" :
+                            rfp.status === "rejected" ? "destructive" :
+                            rfp.status === "proposal_submitted" ? "secondary" :
+                            "outline"
+                          }
                           className="ml-2"
                         >
-                          {rfp.status}
+                          {rfp.status === "proposal_submitted" ? "Proposal Submitted" : rfp.status}
                         </Badge>
                       </div>
                       {rfp.client_name && (
@@ -121,9 +126,14 @@ const Dashboard = () => {
                     <div className="flex items-center justify-between pt-4 border-t border-border">
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span>{rfp.rfp_requirements?.[0]?.count || 0} requirements</span>
-                        <span>{rfp.compliance_checks?.[0]?.count || 0} checks</span>
                       </div>
-                      <CheckCircle2 className="w-5 h-5 text-success" />
+                      {rfp.compatibility_score !== null && (
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm font-medium text-primary">
+                            {Math.round(rfp.compatibility_score)}% match
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Card>
