@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { FileText, Building2, CheckSquare, Upload, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import nttDataLogo from "@/assets/ntt-data-logo.png";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
@@ -16,14 +17,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       <nav className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-hero flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">RFP Assistant</h1>
-                <p className="text-xs text-muted-foreground">AI-Powered Proposal Management</p>
-              </div>
+            <Link to="/" className="flex items-center gap-3">
+              <img src={nttDataLogo} alt="NTT DATA" className="h-8 w-auto" />
             </Link>
             
             <div className="flex gap-2">

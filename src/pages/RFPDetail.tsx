@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import jsPDF from "jspdf";
+import { Eye, EyeOff } from "lucide-react";
 
 const RFPDetail = () => {
   const { id } = useParams();
@@ -18,6 +19,7 @@ const RFPDetail = () => {
   const queryClient = useQueryClient();
   const [generatedTemplate, setGeneratedTemplate] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showBudget, setShowBudget] = useState(false);
 
   const { data: rfp, isLoading } = useQuery({
     queryKey: ["rfp", id],
@@ -316,9 +318,9 @@ const RFPDetail = () => {
                 <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
                   <DollarSign className="w-5 h-5 text-success" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="text-sm text-muted-foreground">Budget</p>
-                  <p className="font-semibold">
+                  <p className={`font-semibold ${!showBudget ? 'blur-sm select-none' : ''}`}>
                     {rfp.budget_min && rfp.budget_max
                       ? `$${rfp.budget_min.toLocaleString()} - $${rfp.budget_max.toLocaleString()}`
                       : rfp.budget_min
@@ -326,6 +328,14 @@ const RFPDetail = () => {
                       : `Up to $${rfp.budget_max?.toLocaleString()}`}
                   </p>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowBudget(!showBudget)}
+                  className="h-8 w-8 p-0"
+                >
+                  {showBudget ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Button>
               </div>
             </Card>
           )}

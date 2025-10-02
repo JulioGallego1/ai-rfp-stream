@@ -13,6 +13,7 @@ const UploadRFP = () => {
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [processingMessage, setProcessingMessage] = useState("");
   const [rfpData, setRfpData] = useState({
     title: "",
   });
@@ -60,6 +61,22 @@ const UploadRFP = () => {
     }
 
     setIsProcessing(true);
+    
+    const securityMessages = [
+      "🔍 Scanning for malicious links...",
+      "🛡️ Checking for malware signatures...",
+      "🔐 Verifying document integrity...",
+      "🤖 Interpreting proposal with AI...",
+      "📊 Extracting requirements and metadata...",
+    ];
+    
+    let messageIndex = 0;
+    const messageInterval = setInterval(() => {
+      if (messageIndex < securityMessages.length) {
+        setProcessingMessage(securityMessages[messageIndex]);
+        messageIndex++;
+      }
+    }, 800);
     
     try {
       // Create RFP entry first
@@ -126,7 +143,9 @@ const UploadRFP = () => {
         variant: "destructive",
       });
     } finally {
+      clearInterval(messageInterval);
       setIsProcessing(false);
+      setProcessingMessage("");
     }
   };
 
@@ -218,23 +237,30 @@ const UploadRFP = () => {
                 <li>• Compliance and operational requirements</li>
                 <li>• Priority levels for each requirement</li>
               </ul>
-              <Button
-                onClick={handleSubmit}
-                disabled={isProcessing || !rfpData.title || !selectedFile}
-                className="bg-gradient-hero hover:shadow-primary"
-              >
-                {isProcessing ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                    Processing PDF...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Upload & Process RFP
-                  </>
+              <div className="space-y-3">
+                {isProcessing && processingMessage && (
+                  <div className="text-sm font-medium text-primary animate-pulse">
+                    {processingMessage}
+                  </div>
                 )}
-              </Button>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isProcessing || !rfpData.title || !selectedFile}
+                  className="bg-gradient-hero hover:shadow-primary"
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Processing PDF...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Upload & Process RFP
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </Card>

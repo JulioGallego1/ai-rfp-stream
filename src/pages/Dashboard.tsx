@@ -112,7 +112,7 @@ const Dashboard = () => {
                       {(rfp.budget_min || rfp.budget_max) && (
                         <div className="flex items-center gap-2 text-sm">
                           <DollarSign className="w-4 h-4 text-success" />
-                          <span className="text-muted-foreground">
+                          <span className="text-muted-foreground blur-sm select-none">
                             {rfp.budget_min && rfp.budget_max
                               ? `${rfp.budget_min.toLocaleString()} - ${rfp.budget_max.toLocaleString()} ${rfp.currency}`
                               : rfp.budget_min
