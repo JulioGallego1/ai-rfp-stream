@@ -49,7 +49,7 @@ const Dashboard = () => {
         </div>
 
         {rfps && rfps.length === 0 ? (
-          <Card className="p-12 text-center border-dashed">
+          <Card className="p-12 text-center border-dashed bg-gradient-to-br from-card to-primary/5">
             <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-xl font-semibold mb-2">No RFPs yet</h3>
             <p className="text-muted-foreground mb-6">
@@ -66,7 +66,7 @@ const Dashboard = () => {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {rfps?.map((rfp) => (
               <Link key={rfp.id} to={`/rfp/${rfp.id}`}>
-                <Card className="p-6 hover:shadow-lg transition-all cursor-pointer group">
+                <Card className="p-6 hover:shadow-xl transition-all cursor-pointer group bg-gradient-to-br from-card to-secondary/30 border-primary/10 hover:border-primary/30">
                   <div className="space-y-4">
                     <div>
                       <div className="flex items-start justify-between mb-2">

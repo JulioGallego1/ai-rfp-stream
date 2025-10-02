@@ -159,7 +159,7 @@ const UploadRFP = () => {
           </p>
         </div>
 
-        <Card className="p-6">
+        <Card className="p-6 bg-gradient-to-br from-card to-accent/5 border-accent/20">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 rounded-lg bg-gradient-accent flex items-center justify-center">
               <FileText className="w-6 h-6 text-accent-foreground" />
@@ -220,7 +220,7 @@ const UploadRFP = () => {
           </div>
         </Card>
 
-        <Card className="p-6 bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20">
+        <Card className="p-6 bg-gradient-to-br from-primary/5 via-accent/5 to-secondary/10 border-primary/20">
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-lg bg-gradient-hero flex items-center justify-center flex-shrink-0">
               <Sparkles className="w-5 h-5 text-primary-foreground" />
