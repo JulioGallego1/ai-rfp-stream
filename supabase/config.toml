@@ -1,1 +1,4 @@
 project_id = "sxqjpddcepmtlqlqjzlq"
+
+[functions.process-rfp-pdf]
+verify_jwt = false

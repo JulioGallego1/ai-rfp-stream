@@ -3,9 +3,8 @@ import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, Sparkles } from "lucide-react";
+import { Upload, FileText, Sparkles, File } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,14 +12,33 @@ const UploadRFP = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [rfpData, setRfpData] = useState({
     title: "",
-    client_name: "",
-    description: "",
-    deadline: "",
-    budget_min: "",
-    budget_max: "",
   });
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.type !== "application/pdf") {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a PDF file",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (file.size > 20 * 1024 * 1024) { // 20MB limit
+        toast({
+          title: "File too large",
+          description: "Please upload a file smaller than 20MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!rfpData.title) {
@@ -32,61 +50,79 @@ const UploadRFP = () => {
       return;
     }
 
+    if (!selectedFile) {
+      toast({
+        title: "PDF required",
+        description: "Please upload a PDF document",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsProcessing(true);
     
     try {
-      const { data, error } = await supabase
+      // Create RFP entry first
+      const { data: rfp, error: rfpError } = await supabase
         .from("rfps")
         .insert({
           title: rfpData.title,
-          client_name: rfpData.client_name || null,
-          description: rfpData.description || null,
-          deadline: rfpData.deadline ? new Date(rfpData.deadline).toISOString() : null,
-          budget_min: rfpData.budget_min ? parseFloat(rfpData.budget_min) : null,
-          budget_max: rfpData.budget_max ? parseFloat(rfpData.budget_max) : null,
-          status: "active",
+          status: "pending",
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (rfpError) throw rfpError;
 
-      // Create sample requirements for demo
-      await supabase.from("rfp_requirements").insert([
-        {
-          rfp_id: data.id,
-          requirement_text: "Cloud infrastructure experience",
-          category: "Technical",
-          priority: "high",
-          is_mandatory: true,
-        },
-        {
-          rfp_id: data.id,
-          requirement_text: "ISO 27001 certification",
-          category: "Compliance",
-          priority: "high",
-          is_mandatory: true,
-        },
-        {
-          rfp_id: data.id,
-          requirement_text: "24/7 support availability",
-          category: "Operations",
-          priority: "medium",
-          is_mandatory: false,
-        },
-      ]);
+      // Upload PDF to storage
+      const fileName = `${rfp.id}/${selectedFile.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("rfp-documents")
+        .upload(fileName, selectedFile);
+
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        throw new Error("Failed to upload PDF");
+      }
+
+      // Update RFP with document URL
+      const { error: updateError } = await supabase
+        .from("rfps")
+        .update({ document_url: `rfp-documents/${fileName}` })
+        .eq("id", rfp.id);
+
+      if (updateError) throw updateError;
 
       toast({
-        title: "RFP created successfully",
-        description: "Sample requirements have been added for demo purposes",
+        title: "Processing PDF",
+        description: "AI is extracting key information from your document...",
       });
 
-      navigate(`/rfp/${data.id}`);
+      // Call edge function to process the PDF
+      const { data: processData, error: processError } = await supabase.functions.invoke(
+        'process-rfp-pdf',
+        { body: { rfpId: rfp.id } }
+      );
+
+      if (processError) {
+        console.error("Processing error:", processError);
+        toast({
+          title: "Processing completed with warnings",
+          description: "RFP created but some information may need manual review",
+        });
+      } else {
+        toast({
+          title: "RFP created successfully",
+          description: "AI has extracted key requirements and information",
+        });
+      }
+
+      navigate(`/rfp/${rfp.id}`);
     } catch (error) {
       console.error("Error creating RFP:", error);
       toast({
         title: "Error creating RFP",
-        description: "Please try again",
+        description: error instanceof Error ? error.message : "Please try again",
         variant: "destructive",
       });
     } finally {
@@ -100,7 +136,7 @@ const UploadRFP = () => {
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Upload New RFP</h1>
           <p className="text-muted-foreground">
-            Add RFP details and let AI extract key requirements automatically
+            Upload a PDF and let AI extract requirements, deadlines, and budget automatically
           </p>
         </div>
 
@@ -110,14 +146,14 @@ const UploadRFP = () => {
               <FileText className="w-6 h-6 text-accent-foreground" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold">RFP Details</h2>
-              <p className="text-sm text-muted-foreground">Enter basic information about the proposal</p>
+              <h2 className="text-xl font-semibold">RFP Information</h2>
+              <p className="text-sm text-muted-foreground">Provide basic details and upload PDF</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">RFP Title *</label>
+              <label className="text-sm font-medium mb-2 block">Project Name *</label>
               <Input
                 value={rfpData.title}
                 onChange={(e) => setRfpData({ ...rfpData, title: e.target.value })}
@@ -126,52 +162,40 @@ const UploadRFP = () => {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Client Name</label>
-              <Input
-                value={rfpData.client_name}
-                onChange={(e) => setRfpData({ ...rfpData, client_name: e.target.value })}
-                placeholder="e.g., Government Agency XYZ"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Description</label>
-              <Textarea
-                value={rfpData.description}
-                onChange={(e) => setRfpData({ ...rfpData, description: e.target.value })}
-                placeholder="Brief description of the RFP..."
-                rows={4}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Deadline</label>
-              <Input
-                type="date"
-                value={rfpData.deadline}
-                onChange={(e) => setRfpData({ ...rfpData, deadline: e.target.value })}
-              />
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Minimum Budget (USD)</label>
-                <Input
-                  type="number"
-                  value={rfpData.budget_min}
-                  onChange={(e) => setRfpData({ ...rfpData, budget_min: e.target.value })}
-                  placeholder="100000"
+              <label className="text-sm font-medium mb-2 block">RFP Document (PDF) *</label>
+              <div className="border-2 border-dashed border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="pdf-upload"
                 />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">Maximum Budget (USD)</label>
-                <Input
-                  type="number"
-                  value={rfpData.budget_max}
-                  onChange={(e) => setRfpData({ ...rfpData, budget_max: e.target.value })}
-                  placeholder="500000"
-                />
+                <label
+                  htmlFor="pdf-upload"
+                  className="cursor-pointer flex flex-col items-center gap-2"
+                >
+                  {selectedFile ? (
+                    <>
+                      <File className="w-12 h-12 text-primary" />
+                      <p className="text-sm font-medium">{selectedFile.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                      <Button type="button" variant="outline" size="sm">
+                        Change File
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-12 h-12 text-muted-foreground" />
+                      <p className="text-sm font-medium">Click to upload PDF</p>
+                      <p className="text-xs text-muted-foreground">
+                        Maximum file size: 20MB
+                      </p>
+                    </>
+                  )}
+                </label>
               </div>
             </div>
           </div>
@@ -183,30 +207,34 @@ const UploadRFP = () => {
               <Sparkles className="w-5 h-5 text-primary-foreground" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-2">AI-Powered Analysis</h3>
+              <h3 className="font-semibold mb-2">AI-Powered Extraction</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Once created, you can upload the actual RFP document and our AI will automatically extract
-                key requirements, deadlines, and evaluation criteria.
+                Our AI will automatically analyze the PDF and extract:
               </p>
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isProcessing || !rfpData.title}
-                  className="bg-gradient-hero hover:shadow-primary"
-                >
-                  {isProcessing ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Create RFP
-                    </>
-                  )}
-                </Button>
-              </div>
+              <ul className="text-sm text-muted-foreground space-y-1 mb-4">
+                <li>• Client information and project deadlines</li>
+                <li>• Budget ranges and currency</li>
+                <li>• Required technologies and technical requirements</li>
+                <li>• Compliance and operational requirements</li>
+                <li>• Priority levels for each requirement</li>
+              </ul>
+              <Button
+                onClick={handleSubmit}
+                disabled={isProcessing || !rfpData.title || !selectedFile}
+                className="bg-gradient-hero hover:shadow-primary"
+              >
+                {isProcessing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Processing PDF...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Upload & Process RFP
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </Card>
