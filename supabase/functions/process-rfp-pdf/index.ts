@@ -5,49 +5,59 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 // Regex patterns for fallback extraction
 const REGEX_PATTERNS = {
   deadline: [
+    /(?:submission\s+)?deadline[:\s]+([A-Za-z]+\s+\d{1,2},?\s+\d{4})/i,
+    /(?:due|closing|submission)\s+date[:\s]+([A-Za-z]+\s+\d{1,2},?\s+\d{4})/i,
     /deadline[:\s]+([0-9]{1,2}[-\/][0-9]{1,2}[-\/][0-9]{2,4})/i,
-    /submission\s+date[:\s]+([0-9]{1,2}[-\/][0-9]{1,2}[-\/][0-9]{2,4})/i,
-    /due\s+date[:\s]+([0-9]{1,2}[-\/][0-9]{1,2}[-\/][0-9]{2,4})/i,
-    /closing\s+date[:\s]+([0-9]{1,2}[-\/][0-9]{1,2}[-\/][0-9]{2,4})/i,
     /([0-9]{1,2}[-\/][0-9]{1,2}[-\/][0-9]{2,4})/g
   ],
   budget: [
-    /budget[:\s]+(?:USD|EUR|GBP|\$|€|£)?\s*([0-9,]+(?:\.[0-9]{2})?)\s*(?:to|-)\s*(?:USD|EUR|GBP|\$|€|£)?\s*([0-9,]+(?:\.[0-9]{2})?)/i,
-    /(?:USD|EUR|GBP|\$|€|£)\s*([0-9,]+(?:\.[0-9]{2})?)\s*(?:to|-)\s*(?:USD|EUR|GBP|\$|€|£)?\s*([0-9,]+(?:\.[0-9]{2})?)/i,
+    /budget.*?[€$£]?\s*(\d+(?:\.\d+)?)\s*[MmBb].*?[€$£]?\s*(\d+(?:\.\d+)?)\s*[MmBb]/i,
+    /[€$£]\s*(\d+(?:\.\d+)?)\s*[MmBb].*?[€$£]?\s*(\d+(?:\.\d+)?)\s*[MmBb]/i,
     /budget[:\s]+(?:USD|EUR|GBP|\$|€|£)?\s*([0-9,]+(?:\.[0-9]{2})?)/i
   ],
   currency: [
+    /[€]\s*\d+/,
     /\b(USD|EUR|GBP|CAD|AUD|JPY)\b/i,
     /(\$|€|£|¥)/
   ],
   requirements: [
-    /(?:requirement|must|shall|should|need)[:\s]+(.+?)(?:\n|\.)/gi,
-    /(?:deliverable)[:\s]+(.+?)(?:\n|\.)/gi,
-    /(?:scope of work)[:\s]+(.+?)(?:\n|\.)/gi,
-    /(?:technical specification)[:\s]+(.+?)(?:\n|\.)/gi
+    /●\s*(.+?)(?=\n●|\n\n|$)/gs,
+    /[-•]\s*(.+?)(?=\n[-•]|\n\n|$)/gs,
+    /\d+\.\s+(.+?)(?=\n\d+\.|\n\n|$)/gs,
+    /(?:must demonstrate|must include|must have|required)[:\s]+(.+?)(?=\n|$)/gi,
+    /(?:requirement|deliverable|capability)[:\s]+(.+?)(?=\n|$)/gi
   ]
 };
 
 function parseDate(dateStr: string): string | null {
   try {
+    // Try parsing "Month DD, YYYY" format (e.g., "November 15, 2025")
+    const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 
+                        'july', 'august', 'september', 'october', 'november', 'december'];
+    const monthMatch = dateStr.match(/([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})/i);
+    if (monthMatch) {
+      const monthName = monthMatch[1].toLowerCase();
+      const day = parseInt(monthMatch[2]);
+      const year = parseInt(monthMatch[3]);
+      const month = monthNames.indexOf(monthName) + 1;
+      if (month > 0 && day >= 1 && day <= 31 && year >= 2020 && year <= 2050) {
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      }
+    }
+    
+    // Try parsing DD/MM/YYYY or MM/DD/YYYY format
     const parts = dateStr.split(/[-\/]/);
     if (parts.length === 3) {
       let year, month, day;
-      
-      // Try different date formats
       if (parts[2].length === 4) {
-        // DD/MM/YYYY or MM/DD/YYYY
         day = parseInt(parts[0]);
         month = parseInt(parts[1]);
         year = parseInt(parts[2]);
       } else {
-        // YYYY/MM/DD
         year = parseInt(parts[0]);
         month = parseInt(parts[1]);
         day = parseInt(parts[2]);
       }
-      
-      // Validate
       if (year < 100) year += 2000;
       if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && year >= 2020 && year <= 2050) {
         return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -85,12 +95,30 @@ function extractWithRegex(text: string) {
     const match = text.match(pattern);
     if (match) {
       if (match[2]) {
-        // Range found
-        extracted.budget_min = parseFloat(match[1].replace(/,/g, ''));
-        extracted.budget_max = parseFloat(match[2].replace(/,/g, ''));
+        // Range found - handle M/B suffixes
+        let min = parseFloat(match[1].replace(/,/g, ''));
+        let max = parseFloat(match[2].replace(/,/g, ''));
+        
+        // Check for M (millions) or B (billions) suffix
+        if (/\d+(?:\.\d+)?\s*[Mm]/.test(text.substring(match.index!, match.index! + 50))) {
+          min *= 1000000;
+          max *= 1000000;
+        } else if (/\d+(?:\.\d+)?\s*[Bb]/.test(text.substring(match.index!, match.index! + 50))) {
+          min *= 1000000000;
+          max *= 1000000000;
+        }
+        
+        extracted.budget_min = min;
+        extracted.budget_max = max;
       } else {
         // Single value
-        extracted.budget_max = parseFloat(match[1].replace(/,/g, ''));
+        let budget = parseFloat(match[1].replace(/,/g, ''));
+        if (/\d+(?:\.\d+)?\s*[Mm]/.test(text.substring(match.index!, match.index! + 50))) {
+          budget *= 1000000;
+        } else if (/\d+(?:\.\d+)?\s*[Bb]/.test(text.substring(match.index!, match.index! + 50))) {
+          budget *= 1000000000;
+        }
+        extracted.budget_max = budget;
       }
       break;
     }
@@ -113,18 +141,41 @@ function extractWithRegex(text: string) {
     const matches = text.matchAll(pattern);
     for (const match of matches) {
       const req = match[1]?.trim();
-      if (req && req.length > 10 && req.length < 500) {
-        reqSet.add(req);
+      if (req && req.length > 15 && req.length < 800) {
+        // Clean up the requirement text
+        const cleanReq = req
+          .replace(/\s+/g, ' ')
+          .replace(/[●•\-]\s*/, '')
+          .trim();
+        if (cleanReq.length > 15) {
+          reqSet.add(cleanReq);
+        }
       }
     }
   }
 
-  extracted.requirements = Array.from(reqSet).slice(0, 20).map(text => ({
-    text,
-    category: 'Technical',
-    priority: 'medium',
-    is_mandatory: text.toLowerCase().includes('must') || text.toLowerCase().includes('shall')
-  }));
+  extracted.requirements = Array.from(reqSet).slice(0, 30).map(text => {
+    const lowerText = text.toLowerCase();
+    const isMandatory = lowerText.includes('must') || 
+                       lowerText.includes('shall') || 
+                       lowerText.includes('required') ||
+                       lowerText.includes('mandatory');
+    
+    let category = 'Technical';
+    if (lowerText.includes('compliance') || lowerText.includes('regulatory') || lowerText.includes('legal')) {
+      category = 'Compliance';
+    } else if (lowerText.includes('experience') || lowerText.includes('expertise') || lowerText.includes('proven')) {
+      category = 'Qualification';
+    } else if (lowerText.includes('deliver') || lowerText.includes('provide') || lowerText.includes('implement')) {
+      category = 'Deliverable';
+    } else if (lowerText.includes('budget') || lowerText.includes('cost') || lowerText.includes('payment')) {
+      category = 'Financial';
+    }
+    
+    const priority = isMandatory ? 'high' : 'medium';
+    
+    return { text, category, priority, is_mandatory: isMandatory };
+  });
 
   return extracted;
 }
@@ -196,40 +247,49 @@ serve(async (req) => {
     // Convert PDF to text using pdf.js via CDN
     const arrayBuffer = await fileData.arrayBuffer();
     
-    // Extract text from PDF using external API-based approach
+    // Extract text from PDF with improved method
     let pdfText = '';
     try {
-      // Use a simple but effective approach: extract text via PDF.js from unpkg CDN
-      const formData = new FormData();
-      formData.append('file', new Blob([arrayBuffer], { type: 'application/pdf' }));
-      
-      // For better extraction, we'll use raw text extraction with better parsing
       const uint8Array = new Uint8Array(arrayBuffer);
       const textDecoder = new TextDecoder('utf-8', { fatal: false });
       const rawText = textDecoder.decode(uint8Array);
       
-      // Extract visible text content (between stream/endstream markers)
+      // Method 1: Extract text between parentheses (PDF text objects)
       const textMatches = rawText.match(/\(([^)]+)\)/g) || [];
-      pdfText = textMatches
-        .map(match => match.slice(1, -1))
-        .join(' ')
-        .replace(/\\n/g, '\n')
-        .replace(/\\r/g, '')
-        .replace(/\\/g, '')
-        .trim();
+      let extractedText = textMatches
+        .map(match => {
+          let text = match.slice(1, -1);
+          // Handle PDF escape sequences
+          text = text.replace(/\\n/g, '\n');
+          text = text.replace(/\\r/g, '\r');
+          text = text.replace(/\\t/g, '\t');
+          text = text.replace(/\\([()])/g, '$1');
+          text = text.replace(/\\\\/g, '\\');
+          return text;
+        })
+        .join(' ');
       
-      // If no text found, try basic extraction
-      if (pdfText.length < 100) {
+      // Method 2: Extract text from BT...ET blocks (text blocks)
+      const btEtMatches = rawText.match(/BT\s*(.+?)\s*ET/gs) || [];
+      const btEtText = btEtMatches.map(block => {
+        const texts = block.match(/\(([^)]+)\)/g) || [];
+        return texts.map(t => t.slice(1, -1)).join(' ');
+      }).join('\n');
+      
+      pdfText = (extractedText + '\n' + btEtText).trim();
+      
+      // Fallback: if extraction is poor, use raw text with filtering
+      if (pdfText.length < 200) {
         pdfText = rawText
-          .replace(/[^\x20-\x7E\n\r]/g, ' ')
+          .replace(/[^\x20-\x7E\n\r€£$¥●•\-]/g, ' ')
           .replace(/\s+/g, ' ')
           .trim();
       }
       
       console.log(`Extracted ${pdfText.length} characters from PDF`);
+      console.log(`First 500 chars: ${pdfText.substring(0, 500)}`);
     } catch (pdfError) {
       console.error("PDF parsing error:", pdfError);
-      // Final fallback
       pdfText = new TextDecoder().decode(arrayBuffer);
     }
 
@@ -250,33 +310,57 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert RFP analyst specialized in extracting detailed project requirements from proposal documents. 
+            content: `You are an expert RFP analyst. Your PRIMARY TASK is to extract ALL requirements from the document.
 
-Your primary focus is to identify and extract ALL specific requirements, deliverables, qualifications, and technical needs mentioned in the document.
+REQUIREMENTS EXTRACTION (MOST IMPORTANT):
+Extract EVERY requirement mentioned. Look for:
+1. Bullet points (●, •, -, numbers)
+2. "Must", "Shall", "Required", "Should", "Need to"
+3. Experience/expertise requirements (years, certifications, case studies)
+4. Technical capabilities (technologies, platforms, tools)
+5. Compliance requirements (regulations, standards, certifications)
+6. Deliverables and scope items
+7. Team/staffing requirements
+8. Qualifications and past project requirements
 
-CRITICAL: Requirements are the most important part - extract as many as possible. Look for:
-- Technical requirements (technologies, platforms, tools, infrastructure)
-- Functional requirements (features, capabilities, deliverables)
-- Compliance requirements (certifications, standards, regulations)
-- Operational requirements (timelines, team size, methodologies)
-- Business requirements (budget, reporting, communication)
-- Qualification requirements (experience, expertise, past projects)
+Categorize each requirement:
+- "Technical" - technologies, platforms, tools, infrastructure
+- "Qualification" - experience, expertise, certifications, past projects
+- "Compliance" - regulations, standards, legal requirements
+- "Deliverable" - outputs, solutions, implementations
+- "Operational" - timelines, team size, methodologies
+- "Financial" - budget, payment terms
 
-Each requirement should be specific and actionable. If the document mentions "must have X" or "should provide Y" or "required to Z", those are requirements.`
+Mark as mandatory if text contains: must, shall, required, mandatory, essential.
+
+ALSO EXTRACT:
+- Client name (organization issuing the RFP)
+- Deadline (submission deadline in ISO format YYYY-MM-DD)
+- Budget range (convert M = millions, B = billions to numeric values)
+- Currency (EUR, USD, GBP, etc.)
+- Description (brief project overview, 1-2 sentences)
+- Required technologies (list of specific technologies mentioned)`
           },
           {
             role: "user",
-            content: `Analyze this RFP/Call for Proposals document thoroughly and extract ALL requirements and key information.
+            content: `Analyze this RFP document and extract ALL requirements comprehensively.
 
-INSTRUCTIONS:
-1. Read the ENTIRE document carefully
-2. Extract EVERY requirement mentioned - be comprehensive and detailed
-3. Categorize each requirement appropriately
-4. Identify if requirements are mandatory (MUST/SHALL/REQUIRED) or optional (SHOULD/MAY/PREFERRED)
-5. Extract client name, deadlines, budget ranges, and required technologies
-6. Provide a clear project description
+CRITICAL FOCUS: REQUIREMENTS
+- Extract EVERY bullet point, numbered item, and stated requirement
+- Look for "must demonstrate", "must have", "must include" sections
+- Capture experience requirements (e.g., "10 years expertise")
+- Capture capability requirements (e.g., "cloud platforms", "AI expertise")
+- Capture compliance requirements (e.g., "GDPR", "Basel III")
+- Find staffing/team requirements
+- Find all technical requirements
 
-PRIORITIZE finding and extracting requirements - this is the most critical task. A typical RFP has 5-30+ requirements.
+For each requirement:
+1. Extract the FULL text (not truncated)
+2. Categorize correctly (Technical/Qualification/Compliance/Deliverable/Operational/Financial)
+3. Set priority (high if mandatory, medium otherwise)
+4. Set is_mandatory (true if contains must/shall/required/mandatory)
+
+Also extract: client_name, deadline (ISO format), budget (numeric values), currency, description, required_technologies
 
 RFP DOCUMENT CONTENT:
 ${pdfText.substring(0, 100000)}`
@@ -325,37 +409,46 @@ ${pdfText.substring(0, 100000)}`
     });
 
     if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error("AI API error:", aiResponse.status, errorText);
+      
       if (aiResponse.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limits exceeded, please try again later." }),
+          JSON.stringify({ error: "Rate limits exceeded, please try again later.", details: errorText }),
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       if (aiResponse.status === 402) {
         return new Response(
-          JSON.stringify({ error: "Payment required, please add funds to your workspace." }),
+          JSON.stringify({ error: "Payment required, please add funds to your workspace.", details: errorText }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      const errorText = await aiResponse.text();
-      console.error("AI API error:", aiResponse.status, errorText);
       return new Response(
-        JSON.stringify({ error: "AI processing failed" }),
+        JSON.stringify({ error: "AI processing failed", details: errorText, status: aiResponse.status }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const aiData = await aiResponse.json();
-    console.log("AI response:", JSON.stringify(aiData));
+    console.log("AI response received:", JSON.stringify(aiData).substring(0, 500));
 
     // Extract the function call result
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) {
-      throw new Error("No tool call in AI response");
+      console.error("No tool call in AI response. Full response:", JSON.stringify(aiData));
+      throw new Error("No tool call in AI response. This might indicate the AI couldn't parse the PDF content.");
     }
 
     const extractedData = JSON.parse(toolCall.function.arguments);
-    console.log("AI extracted data:", extractedData);
+    console.log("AI extracted data summary:", {
+      client_name: extractedData.client_name,
+      deadline: extractedData.deadline,
+      budget_range: `${extractedData.budget_min} - ${extractedData.budget_max}`,
+      currency: extractedData.currency,
+      requirements_count: extractedData.requirements?.length || 0,
+      technologies_count: extractedData.required_technologies?.length || 0
+    });
 
     // Apply regex fallback for missing fields
     console.log("Applying regex fallback extraction...");
@@ -431,8 +524,13 @@ ${pdfText.substring(0, 100000)}`
 
   } catch (error) {
     console.error("Error in process-rfp-pdf:", error);
+    console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+        type: error instanceof Error ? error.constructor.name : typeof error
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
