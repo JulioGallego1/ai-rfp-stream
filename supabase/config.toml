@@ -1,7 +1,1 @@
 project_id = "sxqjpddcepmtlqlqjzlq"
-
-[functions.process-rfp-pdf]
-verify_jwt = false
-
-[functions.generate-rfp-response]
-verify_jwt = false
