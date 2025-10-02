@@ -10,6 +10,7 @@ import { CheckCircle2, XCircle, Calendar, DollarSign, FileText, Sparkles, AlertC
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import jsPDF from "jspdf";
 
 const RFPDetail = () => {
   const { id } = useParams();
@@ -121,6 +122,79 @@ const RFPDetail = () => {
     setIsGenerating(true);
     generateTemplateMutation.mutate();
     setTimeout(() => setIsGenerating(false), 500);
+  };
+
+  const handleGeneratePDF = () => {
+    const content = generatedTemplate || existingResponse?.draft_content || "";
+    
+    if (!content) {
+      toast({
+        title: "No content to export",
+        description: "Please generate a template first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Set up formatting
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const maxLineWidth = pageWidth - (margin * 2);
+      
+      // Add header
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text(rfp.title, margin, margin);
+      
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Client: ${rfp.client_name || 'N/A'}`, margin, margin + 10);
+      doc.text(`Date: ${format(new Date(), "MMMM d, yyyy")}`, margin, margin + 15);
+      
+      // Add a line separator
+      doc.setLineWidth(0.5);
+      doc.line(margin, margin + 20, pageWidth - margin, margin + 20);
+      
+      // Add content
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      
+      const lines = doc.splitTextToSize(content, maxLineWidth);
+      let currentY = margin + 30;
+      
+      lines.forEach((line: string) => {
+        if (currentY > pageHeight - margin) {
+          doc.addPage();
+          currentY = margin;
+        }
+        doc.text(line, margin, currentY);
+        currentY += 5;
+      });
+
+      // Save the PDF
+      const fileName = `RFP_Response_${rfp.title.replace(/[^a-z0-9]/gi, '_')}_${format(new Date(), "yyyy-MM-dd")}.pdf`;
+      doc.save(fileName);
+
+      toast({
+        title: "PDF generated successfully",
+        description: `Downloaded as ${fileName}`,
+      });
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      toast({
+        title: "Failed to generate PDF",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
   };
 
   // Calculate compliance - VERY LENIENT MATCHING
@@ -391,7 +465,7 @@ const RFPDetail = () => {
               />
               <div className="flex gap-2">
                 <Button variant="outline">Save Draft</Button>
-                <Button>Submit Proposal</Button>
+                <Button onClick={handleGeneratePDF}>Generate PDF & Submit</Button>
               </div>
             </div>
           )}
